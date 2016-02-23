@@ -1,4 +1,4 @@
-/**
+/*-
 package main
 
 import "os"
@@ -12,10 +12,10 @@ import "fmt"
 
 func main() {
 	///for _, s := range []string{"Alice", "Bob"} {
-		fmt.Println($s)
+		fmt.Println(#s)
 	///}
 }
 
-/**
+/*-
 }
 */
