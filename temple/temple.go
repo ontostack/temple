@@ -1,4 +1,4 @@
-package main
+package temple
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type temple struct {
+type Temple struct {
 	prnt *printer_
 	scn  *scanner.Scanner
 	fset *token.FileSet
@@ -16,19 +16,19 @@ type temple struct {
 	pos  token.Position
 }
 
-func newTemplE(fname string, src []byte, wr io.Writer) *temple {
+func New(fname string, src []byte, wr io.Writer) *Temple {
 	var s scanner.Scanner
 	fset := token.NewFileSet()
 	file := fset.AddFile(fname, fset.Base(), len(src))
 	s.Init(file, src, nil, scanner.ScanComments)
-	return &temple{
+	return &Temple{
 		scn:  &s,
 		fset: fset,
 		prnt: &printer_{wr: wr},
 	}
 }
 
-func (p *temple) addToken(tok token.Token, lit string) {
+func (p *Temple) addToken(tok token.Token, lit string) {
 	if len(lit) > 0 {
 		p.prnt.addData(" " + lit)
 	} else {
@@ -36,7 +36,7 @@ func (p *temple) addToken(tok token.Token, lit string) {
 	}
 }
 
-func (p *temple) scan() (token.Token, string, bool) {
+func (p *Temple) scan() (token.Token, string, bool) {
 	fpos, tok, lit := p.scn.Scan()
 	p.pos = p.fset.Position(fpos)
 	if tok == token.EOF {
@@ -52,12 +52,12 @@ func (p *temple) scan() (token.Token, string, bool) {
 	return tok, lit, false
 }
 
-func (p *temple) errorf(format string, args ...interface{}) {
+func (p *Temple) errorf(format string, args ...interface{}) {
 	head := fmt.Sprintf("%s:%d:%d:", p.pos.Filename, p.pos.Line, p.pos.Column)
 	fmt.Printf(head+format+"\n", args...)
 }
 
-func (p *temple) run() {
+func (p *Temple) Run() {
 loop:
 	for {
 		tok, lit, stop := p.scan()
