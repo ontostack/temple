@@ -11,6 +11,8 @@ import "fmt"
 
 func main() {
 	///for _, s := range []string{"Alice", "Bob"} {
+	///x := struct{y string}{y: s}
+		fmt.Println(#(x.y))
 		fmt.Println(#s)
 	///}
 }

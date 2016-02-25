@@ -1,11 +1,11 @@
 package main
 
 import (
-	"os"
 	"log"
+	"os"
 )
 
-//go:generate ..\..\temple.exe gen\e1.go
+//go:generate ..\..\temple.exe gen\e1gen.go
 func main() {
 	f, err := os.Create(os.Args[1])
 	if os.IsExist(err) {

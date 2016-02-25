@@ -42,14 +42,14 @@ func (p *Temple) scan() (token.Token, string, bool) {
 	p.pos = p.fset.Position(fpos)
 	if tok == token.EOF {
 		if p.started {
-			p.prnt.flushLine(p.pos.Line - p.line)
+			//p.prnt.flushLine(p.pos.Line - p.line)
 		}
 		return token.EOF, "", true
 	}
 
 	if p.pos.Line > p.line {
 		if p.started {
-			p.prnt.flushLine(p.pos.Line - p.line)
+			//p.prnt.flushLine(p.pos.Line - p.line)
 		}
 		p.line = p.pos.Line
 	}
@@ -60,6 +60,37 @@ func (p *Temple) scan() (token.Token, string, bool) {
 func (p *Temple) errorf(format string, args ...interface{}) {
 	head := fmt.Sprintf("%s:%d:%d:", p.pos.Filename, p.pos.Line, p.pos.Column)
 	fmt.Printf(head+format+"\n", args...)
+}
+
+func (p *Temple) getParen() string {
+	n := 1
+	s := ""
+	addt := func(tok token.Token, lit string) string {
+		if len(lit) > 0 {
+			return " " + lit
+		} else {
+			return " " + tok.String()
+		}
+	}
+	for n > 0 {
+		tok, lit, stop := p.scan()
+		if stop {
+			break
+		}
+		switch tok {
+		case token.RPAREN:
+			n -= 1
+			if n > 0 {
+				s += addt(tok, lit)
+			}
+		case token.LPAREN:
+			n += 1
+			s += addt(tok, lit)
+		default:
+			s += addt(tok, lit)
+		}
+	}
+	return s
 }
 
 func (p *Temple) Run() {
@@ -100,6 +131,11 @@ loop:
 					p.prnt.flush()
 				}
 				p.prnt.code(s)
+			default:
+				if !p.started {
+					continue loop
+				}
+				p.addToken(tok, lit)
 			}
 		case tok == token.ILLEGAL:
 			if !p.started {
@@ -115,6 +151,10 @@ loop:
 				case token.IDENT:
 					p.prnt.flush()
 					p.prnt.printVar(lit)
+				case token.LPAREN:
+					s := p.getParen()
+					p.prnt.flush()
+					p.prnt.printVar(s)
 				default:
 					p.errorf("Unexpected token: %s", tok.String())
 					return
@@ -128,6 +168,10 @@ loop:
 				case token.IDENT:
 					p.prnt.flush()
 					p.prnt.printVarString(lit)
+				case token.LPAREN:
+					s := p.getParen()
+					p.prnt.flush()
+					p.prnt.printVarString(s)
 				default:
 					p.errorf("Unexpected token: %s", tok.String())
 					return
