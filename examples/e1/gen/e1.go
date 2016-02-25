@@ -1,10 +1,9 @@
 /*-
 package main
 
-import "os"
+import "io"
 
-func main() {
-	writer := os.Stdout;
+func makeLoop(writer io.Writer) {
 */
 
 package main

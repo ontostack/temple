@@ -14,6 +14,7 @@ type Temple struct {
 	fset *token.FileSet
 	line int
 	pos  token.Position
+	started bool
 }
 
 func New(fname string, src []byte, wr io.Writer) *Temple {
@@ -40,12 +41,16 @@ func (p *Temple) scan() (token.Token, string, bool) {
 	fpos, tok, lit := p.scn.Scan()
 	p.pos = p.fset.Position(fpos)
 	if tok == token.EOF {
-		p.prnt.flushLine(p.pos.Line - p.line)
+		if p.started {
+			p.prnt.flushLine(p.pos.Line - p.line)
+		}
 		return token.EOF, "", true
 	}
 
 	if p.pos.Line > p.line {
-		p.prnt.flushLine(p.pos.Line - p.line)
+		if p.started {
+			p.prnt.flushLine(p.pos.Line - p.line)
+		}
 		p.line = p.pos.Line
 	}
 
@@ -58,6 +63,7 @@ func (p *Temple) errorf(format string, args ...interface{}) {
 }
 
 func (p *Temple) Run() {
+	p.started = false
 loop:
 	for {
 		tok, lit, stop := p.scan()
@@ -68,17 +74,39 @@ loop:
 		switch {
 		case tok == token.COMMENT:
 			switch {
+			case strings.HasPrefix(lit, "/*-"):
+				s := lit[3 : len(lit)-2]
+				if p.started {
+					p.prnt.flush()
+				}
+				p.prnt.code(s)
+				p.started = !p.started
+			case strings.HasPrefix(lit, "//-"):
+				s := lit[3 : len(lit)]
+				if p.started {
+					p.prnt.flush()
+				}
+				p.prnt.code(s)
+				p.started = !p.started
 			case strings.HasPrefix(lit, "/**"):
 				s := lit[3 : len(lit)-2]
-				p.prnt.flush()
+				if p.started {
+					p.prnt.flush()
+				}
 				p.prnt.code(s)
 			case strings.HasPrefix(lit, "///"):
-				s := lit[3 : len(lit)-1]
-				p.prnt.flush()
+				s := lit[3 : len(lit)]
+				if p.started {
+					p.prnt.flush()
+				}
 				p.prnt.code(s)
 			}
 		case tok == token.ILLEGAL:
-			if lit == "$" {
+			if !p.started {
+				continue loop
+			}
+			switch lit {
+			case "$":
 				tok, lit, stop := p.scan()
 				if stop {
 					break loop
@@ -91,8 +119,24 @@ loop:
 					p.errorf("Unexpected token: %s", tok.String())
 					return
 				}
+			case "#":
+				tok, lit, stop := p.scan()
+				if stop {
+					break loop
+				}
+				switch tok {
+				case token.IDENT:
+					p.prnt.flush()
+					p.prnt.printVarString(lit)
+				default:
+					p.errorf("Unexpected token: %s", tok.String())
+					return
+				}
 			}
 		default:
+			if !p.started {
+				continue loop
+			}
 			p.addToken(tok, lit)
 		}
 	}

@@ -26,6 +26,10 @@ func (p *printer_) printVar(s string) {
 	fmt.Fprintf(p.wr, "writer.Write([]byte(%s))\n", s)
 }
 
+func (p *printer_) printVarString(s string) {
+	fmt.Fprintf(p.wr, "writer.Write([]byte(`\"`+%s+`\"`))\n", s)
+}
+
 func (p *printer_) addData(s string) {
 	p.data += s
 }
