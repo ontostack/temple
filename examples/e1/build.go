@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/codeskyblue/go-sh"
+	"io"
+
 	. "github.com/ontostack/buildr"
 )
 
-//go:generate ..\..\temple.exe gen\e1gen.go
+//go:generate ../../temple gen/e1gen.go
 func main() {
 	builder := File("e1.exe")
 
@@ -13,23 +14,14 @@ func main() {
 		if !Exists("e1") && !Mkdir("e1") {
 			return false
 		}
-		if f, ok := CreateIfNotExists("e1/e1.go"); !ok {
+		if !FillFile("e1/e1.go", func(w io.Writer) bool { makeLoop(w); return true }) {
 			return false
-		} else {
-			func() {
-				defer f.Close()
-				makeLoop(f)
-			}()
 		}
-		return InDir("e1", func() bool {
-			return Cmd(sh.Command("go", "fmt"))
-		})
+		return InDir("e1", GoFmt)
 	})
 
 	e1exe := File("e1/e1.exe").Depends(e1go).Make(func(...TargetI) bool {
-		return InDir("e1", func() bool {
-			return Cmd(sh.Command("go", "build"))
-		})
+		return InDir("e1", GoBuild)
 	})
 
 	e1exe.Build()
