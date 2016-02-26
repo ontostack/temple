@@ -1,19 +1,25 @@
 package temple
 
 import (
+	"bytes"
 	"fmt"
+	"go/format"
 	"go/scanner"
 	"go/token"
 	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
 type Temple struct {
-	prnt *printer_
-	scn  *scanner.Scanner
-	fset *token.FileSet
-	line int
-	pos  token.Position
+	prnt    *printer_
+	scn     *scanner.Scanner
+	fset    *token.FileSet
+	line    int
+	pos     token.Position
 	started bool
 }
 
@@ -113,7 +119,7 @@ loop:
 				p.prnt.code(s)
 				p.started = !p.started
 			case strings.HasPrefix(lit, "//-"):
-				s := lit[3 : len(lit)]
+				s := lit[3:len(lit)]
 				if p.started {
 					p.prnt.flush()
 				}
@@ -126,7 +132,7 @@ loop:
 				}
 				p.prnt.code(s)
 			case strings.HasPrefix(lit, "///"):
-				s := lit[3 : len(lit)]
+				s := lit[3:len(lit)]
 				if p.started {
 					p.prnt.flush()
 				}
@@ -184,4 +190,42 @@ loop:
 			p.addToken(tok, lit)
 		}
 	}
+}
+
+func Run(args ...string) {
+	log := log.New(os.Stderr, "", log.LstdFlags)
+	if len(args) < 1 {
+		log.Fatalln("not enough arguments")
+	}
+	srcName := args[0]
+	dest, err := filepath.Abs(".")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if len(args) > 1 {
+		dest, err = filepath.Abs(args[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+	stat, err := os.Stat(dest)
+	if os.IsNotExist(err) {
+		log.Fatalln(err)
+	}
+	if !stat.IsDir() {
+		log.Fatalln("destination should be directory path")
+	}
+	src, err := ioutil.ReadFile(srcName)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	outputName := filepath.Join(dest, filepath.Base(srcName))
+	buf := &bytes.Buffer{}
+	New("sample.go", src, buf).Run()
+	b, err := format.Source(buf.Bytes())
+	if err != nil {
+		ioutil.WriteFile(outputName, buf.Bytes(), os.ModePerm)
+		log.Fatalln(err)
+	}
+	ioutil.WriteFile(outputName, b, os.ModePerm)
 }
