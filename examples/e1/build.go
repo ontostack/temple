@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/codeskyblue/go-sh"
 	. "github.com/ontostack/buildr"
 )
@@ -23,29 +21,15 @@ func main() {
 				makeLoop(f)
 			}()
 		}
-		if !Check(os.Chdir("e1")) {
-			return false
-		}
-		if !Cmd(sh.Command("go", "fmt")) {
-			return false
-		}
-		if !Check(os.Chdir("..")) {
-			return false
-		}
-		return true
+		return InDir("e1", func() bool {
+			return Cmd(sh.Command("go", "fmt"))
+		})
 	})
 
 	e1exe := File("e1/e1.exe").Depends(e1go).Make(func(...TargetI) bool {
-		if !Check(os.Chdir("e1")) {
-			return false
-		}
-		if !Cmd(sh.Command("go", "build")) {
-			return false
-		}
-		if !Check(os.Chdir("..")) {
-			return false
-		}
-		return true
+		return InDir("e1", func() bool {
+			return Cmd(sh.Command("go", "build"))
+		})
 	})
 
 	e1exe.Build()
