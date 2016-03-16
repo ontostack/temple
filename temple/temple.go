@@ -116,7 +116,7 @@ loop:
 				p.prnt.flush()
 				p.generate = !p.generate
 			case "$":
-				if p.generate {
+				if !p.generate {
 					tok, lit, stop := p.scan()
 					if stop {
 						break loop

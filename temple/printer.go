@@ -24,7 +24,7 @@ func (p *printer_) code(s string) {
 }
 
 func (p *printer_) printVar(s string) {
-	fmt.Fprintf(p.wr, p.wname+".Write([]byte(%s))\n", s)
+	fmt.Fprintf(p.wr, p.wname+".Write([]byte(` `+%s))\n", s)
 }
 
 func (p *printer_) printVarString(s string) {
