@@ -6,28 +6,29 @@ import (
 )
 
 type printer_ struct {
-	wr   io.Writer
-	data string
+	wr    io.Writer
+	data  string
+	wname string
 }
 
 func (p *printer_) print(s string) {
-	fmt.Fprintf(p.wr, "writer.Write([]byte(`%s`))\n", s)
+	fmt.Fprintf(p.wr, p.wname+".Write([]byte(`%s`))\n", s)
 }
 
 func (p *printer_) println(s string) {
-	fmt.Fprintf(p.wr, "writer.Write([]byte(`%s`+"+`"\n"))`+"\n", s)
+	fmt.Fprintf(p.wr, p.wname+".Write([]byte(`%s`+"+`"\n"))`+"\n", s)
 }
 
 func (p *printer_) code(s string) {
-	fmt.Fprintln(p.wr, s)
+	fmt.Fprint(p.wr, s)
 }
 
 func (p *printer_) printVar(s string) {
-	fmt.Fprintf(p.wr, "writer.Write([]byte(%s))\n", s)
+	fmt.Fprintf(p.wr, p.wname+".Write([]byte(%s))\n", s)
 }
 
 func (p *printer_) printVarString(s string) {
-	fmt.Fprintf(p.wr, "writer.Write([]byte(`\"`+%s+`\"`))\n", s)
+	fmt.Fprintf(p.wr, p.wname+".Write([]byte(`\"`+%s+`\"`))\n", s)
 }
 
 func (p *printer_) addData(s string) {

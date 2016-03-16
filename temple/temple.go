@@ -11,16 +11,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Temple struct {
-	prnt    *printer_
-	scn     *scanner.Scanner
-	fset    *token.FileSet
-	line    int
-	pos     token.Position
-	started bool
+	prnt     *printer_
+	scn      *scanner.Scanner
+	fset     *token.FileSet
+	line     int
+	pos      token.Position
+	generate bool
 }
 
 func New(fname string, src []byte, wr io.Writer) *Temple {
@@ -31,7 +30,7 @@ func New(fname string, src []byte, wr io.Writer) *Temple {
 	return &Temple{
 		scn:  &s,
 		fset: fset,
-		prnt: &printer_{wr: wr},
+		prnt: &printer_{wr: wr, wname: "writer"},
 	}
 }
 
@@ -43,20 +42,22 @@ func (p *Temple) addToken(tok token.Token, lit string) {
 	}
 }
 
+func (p *Temple) addCode(tok token.Token, lit string) {
+	if len(lit) > 0 {
+		p.prnt.code(" " + lit)
+	} else {
+		p.prnt.code(" " + tok.String())
+	}
+}
+
 func (p *Temple) scan() (token.Token, string, bool) {
 	fpos, tok, lit := p.scn.Scan()
 	p.pos = p.fset.Position(fpos)
 	if tok == token.EOF {
-		if p.started {
-			//p.prnt.flushLine(p.pos.Line - p.line)
-		}
 		return token.EOF, "", true
 	}
 
 	if p.pos.Line > p.line {
-		if p.started {
-			//p.prnt.flushLine(p.pos.Line - p.line)
-		}
 		p.line = p.pos.Line
 	}
 
@@ -100,7 +101,7 @@ func (p *Temple) getParen() string {
 }
 
 func (p *Temple) Run() {
-	p.started = false
+	p.generate = false
 loop:
 	for {
 		tok, lit, stop := p.scan()
@@ -109,63 +110,46 @@ loop:
 		}
 
 		switch {
-		case tok == token.COMMENT:
-			switch {
-			case strings.HasPrefix(lit, "/*-"):
-				s := lit[3 : len(lit)-2]
-				if p.started {
-					p.prnt.flush()
-				}
-				p.prnt.code(s)
-				p.started = !p.started
-			case strings.HasPrefix(lit, "//-"):
-				s := lit[3:len(lit)]
-				if p.started {
-					p.prnt.flush()
-				}
-				p.prnt.code(s)
-				p.started = !p.started
-			case strings.HasPrefix(lit, "/**"):
-				s := lit[3 : len(lit)-2]
-				if p.started {
-					p.prnt.flush()
-				}
-				p.prnt.code(s)
-			case strings.HasPrefix(lit, "///"):
-				s := lit[3:len(lit)]
-				if p.started {
-					p.prnt.flush()
-				}
-				p.prnt.code(s)
-			default:
-				if !p.started {
-					continue loop
-				}
-				p.addToken(tok, lit)
-			}
 		case tok == token.ILLEGAL:
-			if !p.started {
-				continue loop
-			}
 			switch lit {
+			case "@":
+				p.prnt.flush()
+				p.generate = !p.generate
 			case "$":
-				tok, lit, stop := p.scan()
-				if stop {
-					break loop
+				if p.generate {
+					tok, lit, stop := p.scan()
+					if stop {
+						break loop
+					}
+					if tok == token.IDENT {
+						p.prnt.wname = lit
+					} else {
+						p.errorf("Unexpected token: %s", tok.String())
+						return
+					}
+				} else {
+					tok, lit, stop := p.scan()
+					if stop {
+						break loop
+					}
+					switch tok {
+					case token.IDENT:
+						p.prnt.flush()
+						p.prnt.printVar(lit)
+					case token.LPAREN:
+						s := p.getParen()
+						p.prnt.flush()
+						p.prnt.printVar(s)
+					default:
+						p.errorf("Unexpected token: %s", tok.String())
+						return
+					}
 				}
-				switch tok {
-				case token.IDENT:
-					p.prnt.flush()
-					p.prnt.printVar(lit)
-				case token.LPAREN:
-					s := p.getParen()
-					p.prnt.flush()
-					p.prnt.printVar(s)
-				default:
+			case "#":
+				if !p.generate {
 					p.errorf("Unexpected token: %s", tok.String())
 					return
 				}
-			case "#":
 				tok, lit, stop := p.scan()
 				if stop {
 					break loop
@@ -184,10 +168,11 @@ loop:
 				}
 			}
 		default:
-			if !p.started {
-				continue loop
+			if p.generate {
+				p.addToken(tok, lit)
+			} else {
+				p.addCode(tok, lit)
 			}
-			p.addToken(tok, lit)
 		}
 	}
 }
