@@ -167,6 +167,14 @@ loop:
 					return
 				}
 			}
+		case tok == token.COMMENT:
+			if p.generate {
+				p.addToken(tok, lit)
+				p.addToken(0, "\n")
+			} else {
+				p.addCode(tok, lit)
+				p.addCode(0, "\n")
+			}
 		default:
 			if p.generate {
 				p.addToken(tok, lit)
